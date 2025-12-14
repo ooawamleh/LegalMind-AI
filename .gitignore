@@ -1,0 +1,42 @@
+# Python / Virtual Env
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Environment Variables (CRITICAL - Do not commit)
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite3
+chroma_db/
+legal_AIagent.db
+
+# Logs
+*.log
+audit_trail.log
+
+# Uploads & Temporary Files
+secure_uploads/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS specific
+.DS_Store
+Thumbs.db
