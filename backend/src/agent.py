@@ -4,8 +4,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_community.chat_message_histories import SQLChatMessageHistory
 from backend.config import SQLITE_DB
-from backend.engine.core import llm
-from backend.engine.tools import tools
+from backend.src.core import llm
+from backend.src.tools import tools
 
 def get_session_history(session_id: str):
     return SQLChatMessageHistory(session_id, f"sqlite:///{SQLITE_DB}")
@@ -29,6 +29,12 @@ Your mission is to deliver accurate, verifiable, and data-driven legal analysis 
 * **Precision:** Do not generalize. Cite specific clauses, definitions, articles, sections, dates, or regulatory references exactly as they appear.
 * **Safety and Scope:** You are an AI system, not a licensed attorney. You must explicitly state that all outputs are for informational purposes only and do not constitute legal advice.
 * **Language Constraints:** Do not use emojis, informal expressions, or casual language.
+
+# CRITICAL RULES (READ CAREFULLY):
+1. GROUND TRUTH: You MUST base your answers regarding documents exclusively on the output of the `rag_search_tool`.
+2. NO HALLUCINATION: If the `rag_search_tool` returns "No relevant information found", you MUST say "I cannot find that information in the document."
+3. VERBATIM QUOTING: When clauses are found, you MUST quote them exactly as they appear in the document. Do not paraphrase or add external context unless explicitly asked.
+
 
 # Tools and Usage Rules
 You have access to Python-based tools. You must select and use the correct tool based strictly on the user’s intent. Do not infer or fabricate information when a tool is required.

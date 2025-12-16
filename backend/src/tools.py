@@ -1,9 +1,11 @@
 # backend/ai/tools.py
 from langchain_core.tools import tool
 from langchain_community.utilities import SerpAPIWrapper
+from langchain.retrievers.multi_query import MultiQueryRetriever
 from backend.config import SERPAPI_API_KEY
-from backend.engine.core import llm
-from backend.engine.vector_store import get_vector_store, get_cosine_similarity
+from backend.src.core import llm
+from backend.src.vector_store import get_vector_store, get_cosine_similarity
+
 
 # --- TOOLS ---
 
@@ -14,10 +16,16 @@ def rag_search_tool(query: str) -> str:
     Useful for finding definitions, clauses, dates, or parties in the text.
     """
     db = get_vector_store()
-    # Fetch more docs (k=4) to ensure coverage
-    retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 4, "fetch_k": 20})
-    docs = retriever.invoke(query)
-    
+
+    # Use MultiQueryRetriever to expand queries dynamically
+    base_retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 8, "fetch_k": 25})
+    retriever = MultiQueryRetriever.from_llm(
+        retriever=base_retriever,
+        llm=llm
+    )
+
+    docs = retriever.get_relevant_documents(query)
+
     # Deduplicate results
     seen = set()
     unique_docs = []
@@ -25,11 +33,30 @@ def rag_search_tool(query: str) -> str:
         if d.page_content not in seen:
             seen.add(d.page_content)
             unique_docs.append(d)
-            
+
     if not unique_docs:
-        return "No relevant information found in the document."
-        
-    return "\n\n".join([d.page_content for d in unique_docs])
+        print("❌ [RAG Tool] No results found.")  # DEBUG
+        return "System Notification: No relevant information found in the uploaded documents. Do not invent an answer."
+
+    # LOG the snippets found (First 200 chars)
+    for doc in unique_docs[:3]:
+        print(f"✅ [RAG Tool] Retrieved chunk preview:\n{doc.page_content[:200]}...\n")  # DEBUG
+
+    # FORMAT output with strict grounding instruction
+    results = []
+    for i, d in enumerate(unique_docs):
+        results.append(f"Chunk {i+1}:\n{d.page_content}")
+
+    context_str = "\n\n".join(results)
+    return (
+        f"DOCUMENT CONTEXT:\n{context_str}\n\n"
+        "STRICT INSTRUCTION:\n"
+        "- Only answer using the exact text above.\n"
+        "- Quote clauses verbatim.\n"
+        "- If the answer is not present, respond with: 'I cannot find that information in the document.'\n"
+        "- Do not paraphrase or add external context unless explicitly asked."
+    )
+
 
 @tool
 def compliance_check_tool(query: str) -> str:
@@ -86,14 +113,25 @@ def citation_validation_tool(query: str) -> str:
         try:
             search = SerpAPIWrapper(serpapi_api_key=SERPAPI_API_KEY)
             validation_data = search.run(f"legal citation {query}")
-        except:
-            validation_data = "Search unavailable."
+        except Exception as e:
+            validation_data = f"Search failed: {e}"
     else:
         return "Search API key missing. Cannot validate citation."
 
-    prompt = f"Validate this legal citation using the search data:\nData: {validation_data}\nCitation: {query}"
+    # Strict instruction: do not infer content if exact text is missing
+    prompt = f"""
+Validate this legal citation using the search data below.
+Data: {validation_data}
+Citation: {query}
+
+STRICT INSTRUCTION:
+- Confirm whether the citation exists and is valid.
+- If the exact text of the citation is not found, say: "I cannot find the exact wording, but the citation exists and is valid."
+- Do not infer or paraphrase the content of the citation.
+"""
     response = llm.invoke(prompt)
     return getattr(response, "content", str(response))
+
 
 # Export list of tools
 # note: calling the decorated function without () passes the tool object

