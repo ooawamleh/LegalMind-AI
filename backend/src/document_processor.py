@@ -24,7 +24,7 @@ def refine_chunks(docs):
         )
     return refined
 
-def process_document(file_path: str):
+def process_document(file_path: str, file_id: str):
     try:
         splits = []
         file_ext = os.path.splitext(file_path)[1].lower()
@@ -66,13 +66,16 @@ def process_document(file_path: str):
 
         # --- COMMON: CLEAN & STORE ---
         if splits:
+            for doc in splits:
+                doc.metadata["source_id"] = file_id  # <--- Tag for deletion
+            
             cleaned_splits = filter_complex_metadata(splits)
             valid_splits = [doc for doc in cleaned_splits if doc.page_content.strip()]
             
             if valid_splits:
                 vectorstore = get_vector_store()
                 vectorstore.add_documents(valid_splits)
-                logging.info(f"✅ Added {len(valid_splits)} chunks to DB.")
+                logging.info(f"✅ Added {len(valid_splits)} chunks for file {file_id}")
                 return len(valid_splits)
         
         return 0
@@ -80,10 +83,133 @@ def process_document(file_path: str):
     except Exception as e:
         logging.error(f"❌ Error processing document: {str(e)}")
         raise e
+    
     finally:
         if os.getenv("DEBUG_MODE", "false").lower() != "true":
             if os.path.exists(file_path):
                 os.remove(file_path)
+
+
+
+# import os
+# import base64
+# import logging
+# from langchain_text_splitters import RecursiveCharacterTextSplitter
+# from langchain_unstructured import UnstructuredLoader
+# from langchain_core.messages import HumanMessage
+# # NEW IMPORT: Utility to fix the metadata crash
+# from langchain_community.vectorstores.utils import filter_complex_metadata
+
+# from backend.src.core import llm
+# from backend.src.vector_store import get_vector_store
+
+
+# def refine_chunks(docs):
+#     """Further split clauses (a), (b), (c), (d) into smaller retrievable chunks."""
+#     splitter = RecursiveCharacterTextSplitter(
+#         chunk_size=800,
+#         chunk_overlap=100,
+#         separators=["\n(a)", "\n(b)", "\n(c)", "\n(d)", "\n\n"]
+#     )
+#     refined = []
+#     for doc in docs:
+#         refined.extend(
+#             splitter.create_documents([doc.page_content], metadatas=[doc.metadata])
+#         )
+#     return refined
+
+
+# def process_document(file_path: str):
+#     """
+#     Processes a PDF or Image file using Structural Parsing for PDFs.
+#     Includes metadata cleaning to prevent ChromaDB crashes.
+#     """
+#     try:
+#         splits = []
+        
+#         # --- CASE 1: IMAGES (Requires LLM Transcription) ---
+#         if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+#             logging.info("🖼️ Processing Image with LLM Vision...")
+#             with open(file_path, "rb") as image_file:
+#                 image_data = base64.b64encode(image_file.read()).decode("utf-8")
+            
+#             message = HumanMessage(
+#                 content=[
+#                     {"type": "text", "text": "Transcribe and describe this legal document image in detail. Capture all headers and clauses accurately. Preserve title hierarchy."},
+#                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+#                 ]
+#             )
+#             response = llm.invoke([message])
+
+#             if isinstance(response.content, str) and response.content.strip():
+#                 text_content = response.content.strip()
+#                 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+#                 splits = splitter.create_documents([text_content])
+#             else:
+#                 logging.error("❌ LLM returned empty or invalid transcription.")
+#                 return 0
+
+#         # --- CASE 2: PDFs (Uses Unstructured Structural Chunking) ---
+#         else:
+#             logging.info("📄 Processing PDF with Structural Chunking...")
+#             loader = UnstructuredLoader(
+#                 file_path,
+#                 chunking_strategy="by_title",
+#                 max_characters=2000,
+#                 new_after_n_chars=1500,
+#                 combine_text_under_n_chars=500,
+#             )
+#             splits = loader.load()
+
+#             # Fallback if no structural chunks detected
+#             if not splits or all(len(doc.page_content.strip()) == 0 for doc in splits):
+#                 logging.warning("⚠️ No structural chunks detected, falling back to character-based splitting.")
+#                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+#                     raw_text = f.read()
+#                 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+#                 splits = splitter.create_documents([raw_text])
+#             else:
+#                 # Refine chunks for clauses (a), (b), (c), (d)
+#                 splits = refine_chunks(splits)
+
+#         # --- CRITICAL FIX: CLEAN METADATA ---
+#         if splits:
+#             cleaned_splits = filter_complex_metadata(splits)
+#             valid_splits = [doc for doc in cleaned_splits if doc.page_content.strip()]
+
+#             if not valid_splits:
+#                 logging.error("❌ All chunks invalid after metadata cleaning.")
+#                 return 0
+
+#             # Log preview of first few chunks
+#             for i, doc in enumerate(valid_splits[:3]):
+#                 logging.info(f"Chunk {i+1} preview:\nTitle: {doc.metadata.get('title')}\nContent: {doc.page_content[:300]}...\n")
+
+#             vectorstore = get_vector_store()
+#             vectorstore.add_documents(valid_splits)
+#             logging.info(f"✅ Successfully added {len(valid_splits)} structural chunks to DB.")
+#             return len(valid_splits)
+        
+#         logging.warning("⚠️ No text chunks were created from the document.")
+#         return 0
+
+#     except Exception as e:
+#         logging.error(f"❌ Error processing document: {str(e)}")
+#         raise e
+
+#     finally:
+#         # Secure Cleanup (skip if DEBUG_MODE is enabled)
+#         if os.getenv("DEBUG_MODE", "false").lower() != "true":
+#             if os.path.exists(file_path):
+#                 os.remove(file_path)
+#                 logging.info(f"Deleted secure file: {file_path}")
+
+
+
+
+
+
+
 
 # # backend/ai/document_processor.py
 # import os

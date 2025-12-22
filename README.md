@@ -1,147 +1,153 @@
-````markdown
-# ⚖️ Legal AI Agent (Production Grade)
+# ⚖️ Legal AI Agent (Full-Stack)
 
-> **Secure, Multi-modal Legal Analysis System with Real-time Compliance & Document RAG.**
+> **A Secure, Modular Legal Analysis Platform with Real-time RAG & Compliance Checking.**
 
-This is a modular, production-ready AI system designed to assist legal professionals. It features a microservice-style architecture (FastAPI Backend + Gradio Frontend), secure authentication, RBAC-ready auditing, and a specialized Tool-Calling Agent powered by DeepSeek (via OpenRouter) and LangChain.
-
----
-
-## 🚀 Key Features
-
-* **📄 RAG Document Analysis:** Upload PDF contracts or legal images. The system chunks, vectorizes (ChromaDB), and retrieves specific clauses for analysis.
-* **🌐 Real-Time Compliance:** Checks advice against current regulations (GDPR, CCPA, Local Laws) using live web search (SerpApi).
-* **🔍 Citation Validation:** Verifies if quoted case laws or statutes actually exist to prevent AI hallucinations.
-* **⚖️ Clause Comparison:** Semantically compares two legal texts using Cosine Similarity to highlight differences.
-* **🔒 Security First:**
-    * **JWT Authentication:** Secure OAuth2 login flow.
-    * **Audit Logging:** Tracks every user action (Login, Upload, Analyze) in `audit_trail.log`.
-    * **Data Privacy:** Uploaded files are processed in-memory/temporarily and **securely deleted** immediately after vectorization.
-    * **Strict Policies:** Enforced password strength (min 8 chars) and API rate limiting.
-* **⚡ Rate Limiting:** Protected against abuse via `SlowAPI` (e.g., 10 requests/minute).
-
----
-
-## 🛠️ System Architecture
-
-The project is structured as a modular monolith for maintainability:
-
-```text
-legal_ai_system/
-├── backend/                 # FastAPI Server
-│   ├── engine/              # AI Engine Package
-│   │   ├── agent.py         # Tool-Calling Agent & System Prompt
-│   │   ├── tools.py         # Definition of RAG & Search Tools
-│   │   ├── core.py          # LLM & Embedding Initialization
-│   │   └── ...
-│   ├── config.py            # Settings & Logging
-│   ├── database.py          # SQLite User Store
-│   ├── security.py          # JWT & Password Hashing
-│   └── main.py              # API Entry Point
-├── frontend/                # Gradio Client
-│   ├── app.py               # UI Layout & Event Handlers
-│   ├── client.py            # API Communication Logic
-│   └── styles.py            # CSS Styling
-├── requirements.txt         # Dependencies
-├── test_suite.py            # Pytest Integration Tests
-└── .env                     # Secrets (Not committed)
-````
+Legal AI Agent is a robust document analysis system designed for legal professionals. It replaces the traditional monolithic script with a modern **Microservices-ready architecture**, featuring a responsive **React + TypeScript** frontend and a modular **FastAPI** backend. It leverages **LangChain** agents to perform grounded contract analysis, regulatory compliance checks, and citation validation.
 
 -----
 
-## ⚙️ Installation
+## 🚀 Key Features
+
+  * **🧠 Advanced RAG Analysis:**
+      * **Multi-File Support:** Upload and analyze multiple PDFs, Word docs, or images simultaneously.
+      * **Context Isolation:** Documents are vector-indexed (ChromaDB) specifically for the active session and do not bleed into other chats.
+  * **💬 Intelligent Chat System:**
+      * **Smart Auto-Titling:** Deterministic algorithms automatically rename chats based on the context of the first message (e.g., "Contract Review" vs "General Discussion").
+      * **Persistent History:** Resume past conversations instantly with full context retention.
+      * **Welcome Guide:** Onboarding assistant to guide new users.
+  * **📂 Visual File Management:**
+      * **File Cards:** Interactive UI to view and delete uploaded documents from the AI's context.
+      * **Context Control:** Removing a file card instantly wipes its vector embeddings.
+  * **🌐 Real-Time Compliance:** Integrated tools to check current laws (GDPR, CCPA) via live web search (SerpApi).
+  * **🔒 Enterprise-Grade Security:**
+      * **Ephemeral Secrets:** Server generates a new `SECRET_KEY` on every restart, automatically invalidating old tokens.
+      * **RBAC-Ready Auth:** JWT-based authentication with secure Bcrypt password hashing.
+      * **Audit Logging:** Detailed `audit_trail.log` tracking every login, upload, and analysis request.
+
+-----
+
+## 🛠️ System Architecture
+
+The system has been refactored from a monolith into a clean, modular structure:
+
+```text
+legal-ai-agent/
+├── backend/                  # Python API (FastAPI)
+│   ├── main.py               # Application Entry Point
+│   ├── config.py             # Configuration & Ephemeral Key Gen
+│   ├── database.py           # SQLite & ChromaDB Logic
+│   ├── routers/              # Modular API Routes
+│   │   ├── auth.py           # Login & Registration
+│   │   ├── sessions.py       # Chat CRUD & Auto-Titling
+│   │   ├── documents.py      # Uploads & File Management
+│   │   └── chat.py           # Streaming Analysis Endpoint
+│   └── src/                  # Core AI Logic
+│       ├── agent.py          # LangChain Tool-Calling Agent
+│       ├── tools.py          # RAG, Search, & Comparison Tools
+│       └── document_processor.py # Unstructured & OCR Pipelines
+│
+└── frontend/                 # Client (React + Vite)
+    ├── src/
+    │   ├── api/
+    │   │   └── client.ts     # Centralized Axios Client
+    │   ├── components/
+    │   │   ├── Dashboard.tsx # Main Layout
+    │   │   ├── Sidebar.tsx   # Session Management
+    │   │   ├── ChatArea.tsx  # Message Stream & File Cards
+    │   │   └── Login.tsx     # Auth UI
+    │   └── App.tsx           # Routing & Guards
+    └── package.json
+```
+
+-----
+
+## ⚙️ Installation & Setup
 
 ### Prerequisites
 
-  * Python 3.10+
-  * [OpenRouter API Key](https://openrouter.ai/) (for DeepSeek LLM)
-  * [SerpApi Key](https://serpapi.com/) (for Real-time Search)
+  * **Backend:** Python 3.10+
+  * **Frontend:** Node.js 18+ & npm
+  * **API Keys:** OpenRouter (LLM) & SerpApi (Optional for search)
 
-### 1\. Clone & Setup
+### 1\. Backend Setup
 
 ```bash
-# Clone the repository
-git clone [https://github.com/yourusername/legal-ai-agent.git](https://github.com/yourusername/legal-ai-agent.git)
-cd legal-ai-agent
+cd backend
 
-# Create Virtual Environment
+# Create & Activate Virtual Environment
 python -m venv venv
-# Activate:
-# Windows:
-venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
+# Windows: venv\Scripts\activate  |  Mac/Linux: source venv/bin/activate
 
-# Install Dependencies
-pip install -r requirements.txt
+# Install Python Dependencies
+pip install -r ../requirements.txt
+
+# Create .env file
+echo "OPENROUTER_API_KEY=your_key_here" > .env
+echo "SERPAPI_API_KEY=your_key_here" >> .env
+# Note: SECRET_KEY is auto-generated on startup for security
 ```
 
-### 2\. Configure Environment
+### 2\. Frontend Setup
 
-Create a `.env` file in the root directory:
+```bash
+cd frontend
 
-```ini
-OPENROUTER_API_KEY=your-key-here
-SERPAPI_API_KEY=your-serpapi-key-here
-SECRET_KEY=your-secure-random-string
+# Install Node Dependencies
+npm install
+
+# Start Development Server
+npm run dev
 ```
 
 -----
 
 ## 🏃‍♂️ Usage
 
-**You must run the Backend and Frontend in separate terminals.**
+**You must run both servers simultaneously.**
 
-### Terminal 1: Backend (Server)
+1.  **Start Backend:**
 
-Starts the FastAPI server on `http://localhost:8000`.
+    ```bash
+    # In Terminal 1 (root folder)
+    uvicorn backend.main:app --reload --port 8000
+    ```
 
-```bash
-uvicorn backend.main:app --reload
-```
+2.  **Start Frontend:**
 
-*Wait for "Application startup complete"*
+    ```bash
+    # In Terminal 2 (frontend folder)
+    npm run dev
+    ```
 
-### Terminal 2: Frontend (UI)
+3.  **Access the App:**
 
-Starts the Gradio interface on `http://127.0.0.1:7860`.
-
-```bash
-python -m frontend.app
-```
-
-### 🧪 Running Tests
-
-Run the integration test suite to verify Auth, Rate Limiting, and API endpoints.
-
-```bash
-python test_suite.py
-```
+      * Open `http://localhost:5173` in your browser.
+      * **Register:** Create a new account.
+      * **Login:** Access the dashboard.
 
 -----
 
-## 🛡️ Security & Roles
+## 🧠 AI Capabilities
 
-  * **Registration:** New users can sign up via the UI.
-  * **Password Policy:** Passwords must be at least 8 characters long.
-  * **Admin Backdoor (Development Only):**
-      * Username: `admin`
-      * Password: `admin123!`
-      * *Note: This bypasses the DB check for testing purposes.*
+The agent is equipped with specific tools it chooses dynamically:
+
+| Tool Name | Functionality |
+| :--- | :--- |
+| **`rag_search_tool`** | Retrieves specific clauses from your uploaded PDF/Word docs. |
+| **`compliance_check_tool`** | Google searches current regulations to verify legality. |
+| **`clause_comparison_tool`** | Calculates Cosine Similarity between two text inputs. |
+| **`citation_validation_tool`** | Validates if a cited case law actually exists. |
 
 -----
 
-## 🧠 AI Tools Explained
+## 🛡️ Security Protocols
 
-| Tool Name | Trigger Phrase | Function |
-| :--- | :--- | :--- |
-| **rag\_search\_tool** | "In the contract...", "What is the termination date?" | RAG lookup in uploaded file. |
-| **compliance\_check\_tool** | "Is this legal in California?", "Check GDPR compliance" | Live Web Search + Analysis. |
-| **clause\_comparison\_tool** | "Compare Clause A | Clause B" | Cosine Similarity analysis. |
-| **citation\_validation\_tool** | "Validate case Roe v. Wade" | Verifies legal citations via Search. |
+  * **Session Expiry:** Access tokens expire every 60 minutes.
+  * **Force Re-Auth:** Restarting the backend server invalidates all active sessions immediately (via Ephemeral Secret Keys).
+  * **Data Hygiene:** Uploaded files are processed securely; metadata allows precise deletion from the vector store when the user removes a file card.
 
 -----
 
 ## 📜 License
 
-This project is open-source under the **MIT License**..
+This project is licensed under the **MIT License**.

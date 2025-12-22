@@ -1,10 +1,12 @@
-# backend/ai/tools.py
+# backend/src/tools.py
 from langchain_core.tools import tool
 from langchain_community.utilities import SerpAPIWrapper
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from backend.config import SERPAPI_API_KEY
 from backend.src.core import llm
 from backend.src.vector_store import get_vector_store, get_cosine_similarity
+from backend.src.context_vars import session_context
+from backend.database import get_session_files_db
 
 
 # --- TOOLS ---
@@ -14,17 +16,44 @@ def rag_search_tool(query: str) -> str:
     """
     Search the uploaded legal document or contract for specific information.
     Useful for finding definitions, clauses, dates, or parties in the text.
+    Strictly isolated to the current session's files.
     """
+    # 1. Get current Session ID from context
+    session_id = session_context.get()
+    
+    if not session_id:
+        print("❌ [RAG Tool] Error: No active session context found.")
+        return "System Error: No active session context found."
+
+    # 2. Get File IDs belonging to this session
+    session_files = get_session_files_db(session_id)
+    if not session_files:
+        print(f"⚠️ [RAG Tool] No files found for session {session_id}.")
+        return "No documents found in this chat session. Please upload a document first."
+
+    # Extract just the list of file_ids
+    allowed_file_ids = [f['file_id'] for f in session_files]
+
+    # 3. Configure Vector Search with Strict Filtering
     db = get_vector_store()
 
-    # Use MultiQueryRetriever to expand queries dynamically
-    base_retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 8, "fetch_k": 25})
+    # The 'filter' argument ensures we ONLY get chunks where metadata['source_id'] matches one of our session files
+    base_retriever = db.as_retriever(
+        search_type="mmr", 
+        search_kwargs={
+            "k": 8, 
+            "fetch_k": 25,
+            "filter": {"source_id": {"$in": allowed_file_ids}} 
+        }
+    )
+
+    # 4. Use MultiQueryRetriever to expand queries dynamically
     retriever = MultiQueryRetriever.from_llm(
         retriever=base_retriever,
         llm=llm
     )
 
-    docs = retriever.get_relevant_documents(query)
+    docs = retriever.invoke(query)
 
     # Deduplicate results
     seen = set()
@@ -35,7 +64,7 @@ def rag_search_tool(query: str) -> str:
             unique_docs.append(d)
 
     if not unique_docs:
-        print("❌ [RAG Tool] No results found.")  # DEBUG
+        print(f"❌ [RAG Tool] No results found for query '{query}' in session {session_id}.")  # DEBUG
         return "System Notification: No relevant information found in the uploaded documents. Do not invent an answer."
 
     # LOG the snippets found (First 200 chars)
@@ -56,7 +85,6 @@ def rag_search_tool(query: str) -> str:
         "- If the answer is not present, respond with: 'I cannot find that information in the document.'\n"
         "- Do not paraphrase or add external context unless explicitly asked."
     )
-
 
 @tool
 def compliance_check_tool(query: str) -> str:

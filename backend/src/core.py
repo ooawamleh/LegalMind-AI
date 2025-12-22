@@ -1,4 +1,4 @@
-# backend/ai/core.py
+# backend/src/core.py
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from backend.config import OPENROUTER_API_KEY
