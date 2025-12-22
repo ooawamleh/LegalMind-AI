@@ -154,8 +154,7 @@ http://127.0.0.1:7860
 
 The Python frontend will connect directly to the FastAPI backend and allow you to interact with the Legal AI Agent without using React.
 
-```
-
+````
 
 ## ✅ Why this is good
 - Clear fallback for users who struggle with React
@@ -163,7 +162,7 @@ The Python frontend will connect directly to the FastAPI backend and allow you t
 - Professional OSS-style documentation
 - Easy to maintain
 
-```
+````
 
 ## 📁 Project Structure
 
