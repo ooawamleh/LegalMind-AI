@@ -156,7 +156,6 @@ The Python frontend will connect directly to the FastAPI backend and allow you t
 
 ```
 
----
 
 ## ✅ Why this is good
 - Clear fallback for users who struggle with React
@@ -165,7 +164,6 @@ The Python frontend will connect directly to the FastAPI backend and allow you t
 - Easy to maintain
 
 ```
----
 
 ## 📁 Project Structure
 
