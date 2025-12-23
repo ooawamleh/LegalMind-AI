@@ -242,11 +242,11 @@ The system includes specialized AI tools:
 # Run backend tests
 pytest test_suite.py
 ```
-# The test suite covers:
-# - User registration
-# - Authentication
-# - Unauthorized access protection
-# - Rate limiting
+### The test suite covers:
+- User registration
+- Authentication
+- Unauthorized access protection
+- Rate limiting
 
 
 ## 🔒 Security Features
