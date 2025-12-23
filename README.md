@@ -1,4 +1,4 @@
-# Legal AI Agent
+# LegalMind-AI
 
 A secure, full-stack AI-powered legal document analysis system with RAG (Retrieval-Augmented Generation), real-time compliance checking, and multi-modal document processing capabilities.
 
@@ -241,13 +241,13 @@ The system includes specialized AI tools:
 ```bash
 # Run backend tests
 pytest test_suite.py
-
+```
 # The test suite covers:
 # - User registration
 # - Authentication
 # - Unauthorized access protection
 # - Rate limiting
-```
+
 
 ## 🔒 Security Features
 
@@ -306,14 +306,6 @@ Contributions are welcome! Please follow these guidelines:
 4. Add tests for new features
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## ⚠️ Disclaimer
-
-This AI system is for informational purposes only and does not constitute legal advice. All outputs should be reviewed by qualified legal professionals. The system maintains audit logs and session isolation for security, but users are responsible for the confidentiality of their data.
-
 ## 🙏 Acknowledgments
 
 - Built with LangChain for AI orchestration
@@ -321,3 +313,11 @@ This AI system is for informational purposes only and does not constitute legal 
 - Unstructured.io for document parsing
 - OpenRouter for LLM access
 - SerpAPI for web search capabilities
+
+## ⚠️ Disclaimer
+
+This AI system is for informational purposes only and does not constitute legal advice. All outputs should be reviewed by qualified legal professionals. The system maintains audit logs and session isolation for security, but users are responsible for the confidentiality of their data.
+
+## 📄 License
+
+This project is licensed under the MIT License.
