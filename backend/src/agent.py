@@ -9,7 +9,7 @@ from backend.src.tools import tools
 from backend.src.system_prompt import SYSTEM_PROMPT
 
 def get_session_history(session_id: str):
-    return SQLChatMessageHistory(session_id, f"sqlite:///{SQLITE_DB}")
+    return SQLChatMessageHistory(session_id=session_id, connection=f"sqlite:///{SQLITE_DB}")
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_PROMPT),

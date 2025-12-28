@@ -48,9 +48,12 @@ def rag_search_tool(query: str) -> str:
     )
 
     # 4. Use MultiQueryRetriever to expand queries dynamically
+    # CHANGE: We tag this LLM so we can filter its output in chat.py
+    retrieval_llm = llm.with_config(tags=["internal_retrieval"])
+
     retriever = MultiQueryRetriever.from_llm(
         retriever=base_retriever,
-        llm=llm
+        llm=retrieval_llm # Use the tagged LLM
     )
 
     docs = retriever.invoke(query)

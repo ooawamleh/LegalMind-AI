@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage
 
 from backend.database import (
     create_session_db, get_user_sessions, delete_session_db,
-    update_session_title_db
+    update_session_title_db, get_session_files_db
 )
 from backend.security import get_current_user
 from backend.schemas import SessionCreate, SessionResponse, RenameRequest, TitleGenRequest
@@ -29,20 +29,39 @@ async def rename_session(session_id: str, req: RenameRequest, user: str = Depend
 
 @router.post("/{session_id}/auto-title")
 async def auto_generate_title(session_id: str, req: TitleGenRequest, user: str = Depends(get_current_user)):
-    query = req.query.strip()
-    lower_query = query.lower()
+    # 1. PRIORITY: Check if the session has files
+    session_files = get_session_files_db(session_id)
     
-    greetings = ["hello", "hi", "hey", "good morning", "greetings"]
-    if lower_query in greetings or (len(query.split()) < 2 and lower_query.replace('!', '') in greetings):
-        new_title = "General Discussion"
+    if session_files:
+        # If files exist, use the first filename as the title
+        filename = session_files[0]['filename']
+        
+        # Optional: Remove the file extension (e.g., .pdf) for a cleaner look
+        if "." in filename:
+            filename = filename.rsplit(".", 1)[0]
+            
+        new_title = f"📄 {filename}"
+        
     else:
-        words = query.split()
-        if len(words) <= 5:
-            new_title = query
+        # 2. FALLBACK: Use the User's Query
+        query = req.query.strip()
+        lower_query = query.lower()
+        
+        greetings = ["hello", "hi", "hey", "good morning", "greetings"]
+        
+        # Ignore short greetings
+        if lower_query in greetings or (len(query.split()) < 2 and lower_query.replace('!', '') in greetings):
+            new_title = "General Discussion"
         else:
-            new_title = " ".join(words[:5]) + "..."
-        new_title = new_title[:50].capitalize()
+            # Generate title from the first few words
+            words = query.split()
+            if len(words) <= 5:
+                new_title = query
+            else:
+                new_title = " ".join(words[:5]) + "..."
+            new_title = new_title[:50].capitalize()
 
+    # Save and return
     update_session_title_db(session_id, new_title)
     return {"title": new_title}
 
