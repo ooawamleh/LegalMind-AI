@@ -8,6 +8,11 @@ from backend.src.vector_store import get_vector_store, get_cosine_similarity
 from backend.src.context_vars import session_context
 from backend.database import get_session_files_db
 
+# --- CONFIG ---
+# We define a specialized LLM for internal tool operations (thinking/analysis).
+# We use the tag "internal_retrieval" because your chat.py is already configured 
+# to BLOCK stream events with this specific tag.
+internal_llm = llm.with_config(tags=["internal_retrieval"])
 
 # --- TOOLS ---
 
@@ -48,12 +53,10 @@ def rag_search_tool(query: str) -> str:
     )
 
     # 4. Use MultiQueryRetriever to expand queries dynamically
-    # CHANGE: We tag this LLM so we can filter its output in chat.py
-    retrieval_llm = llm.with_config(tags=["internal_retrieval"])
-
+    # CHANGE: Use the global internal_llm (tagged "internal_retrieval")
     retriever = MultiQueryRetriever.from_llm(
         retriever=base_retriever,
-        llm=retrieval_llm # Use the tagged LLM
+        llm=internal_llm 
     )
 
     docs = retriever.invoke(query)
@@ -106,7 +109,9 @@ def compliance_check_tool(query: str) -> str:
         return "Search API key is missing. Cannot check external compliance."
     
     prompt = f"Check regulatory compliance based on these search results:\n{search_results}\n\nQuery: {query}"
-    response = llm.invoke(prompt)
+    
+    # CHANGE: Use internal_llm to hide thinking from the stream
+    response = internal_llm.invoke(prompt)
     return getattr(response, "content", str(response))
 
 @tool
@@ -130,7 +135,8 @@ def clause_comparison_tool(query: str) -> str:
     
     Provide a legal analysis of differences."""
     
-    response = llm.invoke(prompt)
+    # CHANGE: Use internal_llm to hide thinking from the stream
+    response = internal_llm.invoke(prompt)
     return getattr(response, "content", str(response))
 
 @tool
@@ -160,7 +166,8 @@ STRICT INSTRUCTION:
 - If the exact text of the citation is not found, say: "I cannot find the exact wording, but the citation exists and is valid."
 - Do not infer or paraphrase the content of the citation.
 """
-    response = llm.invoke(prompt)
+    # CHANGE: Use internal_llm to hide thinking from the stream
+    response = internal_llm.invoke(prompt)
     return getattr(response, "content", str(response))
 
 

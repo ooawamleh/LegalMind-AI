@@ -16,15 +16,18 @@ async def async_stream_generator(query: str, session_id: str):
     token = session_context.set(session_id)
     
     # 1. Load History Synchronously (Safe DB Access)
-    # We use run_in_threadpool to keep the event loop non-blocking
     history = await run_in_threadpool(get_session_history, session_id)
     chat_history = await run_in_threadpool(lambda: history.messages)
     
     full_response = ""
     
+    # --- BUFFERING STATE ---
+    # We hold text here until we know if it's a preamble ("To determine...") or a real answer
+    pre_tool_buffer = "" 
+    tool_has_started = False
+    
     try:
         # 2. Stream from the Agent Executor Directly (Async)
-        # We pass 'chat_history' manually, bypassing the wrapper conflicts
         async for event in agent_executor.astream_events(
             {
                 "input": query, 
@@ -39,29 +42,56 @@ async def async_stream_generator(query: str, session_id: str):
             # --- Logic to Filter Output ---
             if kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
+                content = chunk.content
                 
-                # CHANGE: Block Internal Retrieval thoughts based on the tag
+                # FILTER: Block Internal Retrieval thoughts based on the tag
                 if "internal_retrieval" in tags:
                     continue
 
-                # Ignore tool arguments
+                # FILTER: Ignore tool arguments
                 if hasattr(chunk, "tool_call_chunks") and len(chunk.tool_call_chunks) > 0:
                     continue
 
-                # Ignore internal RAG thoughts (legacy check, keeping for safety)
+                # FILTER: Ignore internal RAG thoughts (legacy check)
                 metadata = event.get("metadata", {})
                 if metadata.get("langchain_author") != "rag_search_tool":
-                    content = chunk.content
                     if content:
-                        full_response += content # Accumulate for saving later
-                        yield content
+                        if not tool_has_started:
+                            # --- DANGER ZONE (Before Tool) ---
+                            # Buffer text like "To determine..." or "I will search..."
+                            # We do NOT yield this yet.
+                            pre_tool_buffer += content
+                            
+                            # Safety Valve: If the buffer gets long (> 200 chars), 
+                            # it's likely a direct answer (e.g., "Hello!"), so we flush it.
+                            if len(pre_tool_buffer) > 200: 
+                                 yield pre_tool_buffer
+                                 full_response += pre_tool_buffer
+                                 pre_tool_buffer = ""
+                                 tool_has_started = True
+                        else:
+                            # --- SAFE ZONE (After Tool) ---
+                            # The tool has run, so this is the real answer. Yield immediately.
+                            yield content
+                            full_response += content
 
             elif kind == "on_tool_start":
-                if event["name"] in ["rag_search_tool", "compliance_check_tool"]:
-                    yield f"\n\n*Analyzing document...*\n\n"
+                # Check for any of our known tools
+                if event["name"] in ["rag_search_tool", "compliance_check_tool", "clause_comparison_tool", "citation_validation_tool"]:
+                    # --- THE FIX ---
+                    # A tool just started. The buffer contained the "To determine..." preamble.
+                    # We DELETE the buffer so the user never sees it.
+                    pre_tool_buffer = "" 
+                    tool_has_started = True
+                    yield f"\n\n*Analyzing...*\n\n"
 
-        # 3. Save History Manually (Sync DB Access)
-        # Now that streaming is done, we save the user query and the AI response
+        # 3. End of Stream Check
+        # If no tool was ever called (e.g., just "Hello"), flush the buffer now.
+        if pre_tool_buffer:
+            yield pre_tool_buffer
+            full_response += pre_tool_buffer
+
+        # 4. Save History Manually (Sync DB Access)
         if full_response.strip():
             await run_in_threadpool(history.add_user_message, query)
             await run_in_threadpool(history.add_ai_message, full_response)
