@@ -101,66 +101,6 @@ The application will be available at:
 - Backend API: `http://localhost:8000`
 - API Documentation: `http://localhost:8000/docs`
 
-## 🖥️ Alternative Frontend (Python / Gradio)
-
-If you face any issues running the React frontend (such as Node version conflicts, dependency errors, or build failures), the project provides an **alternative frontend implemented purely in Python** using the **Gradio** library.
-
-This Python-based frontend offers a simple and lightweight UI for interacting with the backend API and is especially useful for:
-- Quick testing
-- Development environments
-- Users who prefer a Python-only stack
-
-### 📁 Python Frontend Structure
-
-```
-
-├── python_frontend/
-│   ├── client.py        # Backend API client
-│   ├── styles.py        # UI styling and layout
-│   ├── app.py           # Gradio application entry point
-
-````
-
-### ▶️ How to Run the Python Frontend
-
-1. Make sure the backend server is running:
-```bash
-python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-````
-
-2. Activate your virtual environment (if not already active):
-
-```bash
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install required dependencies (if not already installed):
-
-```bash
-pip install gradio requests
-```
-
-4. Run the Gradio app:
-
-```bash
-python python_frontend/app.py
-```
-
-5. Open the URL shown in the terminal (usually):
-
-```
-http://127.0.0.1:7860
-```
-
-The Python frontend will connect directly to the FastAPI backend and allow you to interact with the Legal AI Agent without using React.
-
-## ✅ Why this is good
-- Clear fallback for users who struggle with React
-- No confusion between frontends
-- Professional OSS-style documentation
-- Easy to maintain
-
-
 ## 📁 Project Structure
 
 ```
@@ -197,10 +137,6 @@ The Python frontend will connect directly to the FastAPI backend and allow you t
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.ts
-├── python_frontend/
-│   ├── client.py        # Backend API client
-│   ├── styles.py        # UI styling and layout
-│   ├── app.py           # Gradio application entry point
 ├── test_suite.py              # Backend API tests
 └── README.md
 ```

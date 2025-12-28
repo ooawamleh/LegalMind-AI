@@ -88,6 +88,8 @@ def rag_search_tool(query: str) -> str:
         "STRICT INSTRUCTION:\n"
         "- Only answer using the exact text above.\n"
         "- Quote clauses verbatim.\n"
+        "- Cite the specific 'Section', 'Article', or 'Clause' header found IN the text.\n"  
+        "- Do NOT cite 'Chunk 1' or 'Chunk 2' as the source.\n"
         "- If the answer is not present, respond with: 'I cannot find that information in the document.'\n"
         "- Do not paraphrase or add external context unless explicitly asked."
     )
